@@ -1,51 +1,52 @@
-# Distributed Wagering Processor (`junglegaming/backend-challenge`)
+# Distributed Wagering Processor
 
-Motor de processamento distribuído de apostas de alta performance construído com **Bun 1.x**, **TypeScript**, **NestJS**, **PostgreSQL** e **AWS SQS**.
+Backend service for processing distributed wager transactions with strict ACID guarantees, idempotency, and outbox/inbox messaging.
+
+Stack: Bun 1.x, TypeScript (strict), NestJS, PostgreSQL 16, AWS SQS (LocalStack).
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
-### Pré-requisitos
-* [Bun 1.x](https://bun.sh)
-* [Docker & Docker Compose](https://www.docker.com/) (opcional para rodar PostgreSQL e LocalStack em containers)
+### Requirements
+* Bun >= 1.2
+* Docker Compose (optional for local Postgres/LocalStack)
 
-### Instalação de Dependências
+### Setup
 ```bash
 bun install
 ```
 
-### Executar Verificação de Tipos (TypeScript Strict)
+### Type Check
 ```bash
 bun run typecheck
 ```
 
-### Executar a Bateria Completa de Testes
+### Tests
 ```bash
 bun test
 ```
 
-> **Nota:** Todos os testes unitários, testes de integração de banco (com DDL real, CHECK constraints, UNIQUE constraints e triggers de imutabilidade) e os 8 cenários concorrentes rodam com banco PostgreSQL real embutido (`@electric-sql/pglite` / WASM) e não necessitam de mocks de banco.
+Tests run against an embedded PostgreSQL 16 engine (`@electric-sql/pglite` / WASM) executing actual DDL migrations, triggers, and constraints without mocks.
 
 ---
 
-## 🐳 Subindo Infraestrutura Local (Docker Compose)
+## Local Infrastructure
 
-Para subir o banco de dados PostgreSQL e o AWS SQS LocalStack:
+To spin up PostgreSQL and LocalStack SQS:
 
 ```bash
 docker compose up -d
 ```
 
-* **PostgreSQL:** `localhost:5432` (banco `jg_db`, usuário `jg_user`, senha `jg_password`)
-* **LocalStack (SQS):** `http://localhost:4566`
-  * Filas FIFO criadas automaticamente: `wager-transactions.fifo` e `wager-transactions-dlq.fifo`
+* Postgres: `localhost:5432` (`jg_db` / `jg_user` / `jg_password`)
+* SQS: `http://localhost:4566` (FIFO queues: `wager-transactions.fifo`, `wager-transactions-dlq.fifo`)
 
 ---
 
-## 📡 Endpoints da API HTTP
+## API Endpoints
 
-### 1. Criar Carteira
+### 1. Create Wallet
 `POST /wallets`
 ```json
 {
@@ -53,11 +54,11 @@ docker compose up -d
   "initialBalance": { "amount": "1000.00", "currency": "BRL" }
 }
 ```
-* Status: `201 Created`
+* Returns `201 Created`
 
-### 2. Processar Transação de Aposta
+### 2. Process Transaction
 `POST /wagering/transactions`  
-Header: `Idempotency-Key: provider-a:transaction-123`
+Header: `Idempotency-Key: <provider>:<tx-id>`
 ```json
 {
   "providerId": "provider-a",
@@ -70,40 +71,45 @@ Header: `Idempotency-Key: provider-a:transaction-123`
   "money": { "amount": "25.00", "currency": "BRL" }
 }
 ```
-* Retornos Semânticos:
-  * `200 OK`: Transação processada ou replay idempotente legítimo.
-  * `202 Accepted`: Aceito em `PENDING_REFERENCE` (quando `REFUND` ou `ROLLBACK` chega antes da `BET`).
-  * `409 Conflict`: Mesma `Idempotency-Key` reenviada com payload divergente.
-  * `422 Unprocessable Entity`: Saldo insuficiente ou regras de negócio violadas.
+* Status codes:
+  * `200 OK`: Processed or idempotent replay.
+  * `202 Accepted`: Queued as `PENDING_REFERENCE` (out-of-order refund/rollback).
+  * `409 Conflict`: Idempotency key reused with mismatched payload.
+  * `422 Unprocessable`: Insufficient funds or invalid reference state.
 
-### 3. Reconciliação Contábil da Carteira
+### 3. Ledger Reconciliation
 `POST /wallets/:walletId/reconciliation`
-* Audita `storedBalance` contra o saldo reconstruído pela soma estrita dos lançamentos do ledger.
+* Compares `wallets.balance` against `sum(wallet_ledger)`.
 
-### 4. Extrato com Paginação por Cursor
-`GET /wallets/:walletId/ledger?cursor=...&limit=50`
-* Paginação opaca e determinística baseada em cursor (sem `OFFSET`).
+### 4. Ledger Feed (Cursor Pagination)
+`GET /wallets/:walletId/ledger?cursor=<opaque>&limit=50`
+* Stable cursor-based pagination (no `OFFSET`).
 
-### 5. Health Checks
+### 5. Health & Telemetry
 * `GET /health/live`
 * `GET /health/ready`
+* `GET /metrics` (Prometheus format)
 
 ---
 
-## 🧪 Estrutura de Testes
+## Test Layout
 
 ```
 tests/
 ├── unit/
-│   ├── money.spec.ts             # Precisão decimal, 2 casas, moedas ISO, imutabilidade
-│   ├── wallet.spec.ts            # Agregado Wallet, factories estáticas, saldo >= 0, versionamento
-│   ├── wager-transaction.spec.ts # Máquina de estados, terminais imutáveis, regras REFUND/ROLLBACK
-│   ├── ledger-entry.spec.ts      # Imutabilidade estrita e verificação isBalanced()
-│   ├── canonical-hash.spec.ts    # Hash canônico ordenado (replay vs conflito 409)
-│   ├── inbox-outbox.spec.ts      # Deduplicação no Inbox e retry com backoff no Outbox
-│   └── integration-events.spec.ts# Envelopes tipados de eventos de integração
+│   ├── money.spec.ts             # Decimal arithmetic, ISO codes, immutability
+│   ├── wallet.spec.ts            # Aggregate root, versioning, balance checks
+│   ├── wager-transaction.spec.ts # State machine, terminal states, refund rules
+│   ├── ledger-entry.spec.ts      # Immutability and balance verification
+│   ├── canonical-hash.spec.ts    # Key sorting hash for conflict detection
+│   ├── inbox-outbox.spec.ts      # SQS deduplication and exponential retry
+│   ├── integration-events.spec.ts# Typed event envelopes
+│   ├── logger-sanitizer.spec.ts  # Secret masking in logs and URLs
+│   ├── prometheus-metrics.spec.ts# Prometheus metric registry validation
+│   └── sqs-consumer-batch.spec.ts# Group-based concurrency and visibility backoff
 ├── integration/
-│   └── integration-suite.spec.ts # CHECK (balance >= 0), UNIQUE, trigger de ledger, atomicidade
+│   └── integration-suite.spec.ts # CHECK balance >= 0, UNIQUE player/currency, trigger lock
 └── concurrency/
-    └── concurrency-scenarios.spec.ts # Os 8 cenários obrigatórios de concorrência e injeção de falhas
+    ├── concurrency-scenarios.spec.ts # 8 core race condition and crash scenarios
+    └── multi-instance-cluster.spec.ts# Multi-node HTTP cluster validation
 ```

@@ -27,7 +27,7 @@ export class SqsConsumer {
     private readonly transactionRunner: ITransactionRunner,
     private readonly processWagerTxUseCase: ProcessWagerTransactionUseCase,
     private readonly sqsClient?: SqsQueueClient
-  ) {}
+  ) { }
 
   public async handleMessage(
     message: SqsMessage
@@ -71,7 +71,7 @@ export class SqsConsumer {
 
       return { acknowledged: true, alreadyProcessed: shouldAck.alreadyProcessed };
     } catch (error) {
-      // Item E: Backoff Exponencial no SQS via changeMessageVisibility
+      // Exponential backoff via SQS visibility timeout on transient failure
       if (this.sqsClient?.changeMessageVisibility && message.receiptHandle) {
         const attempt = message.approximateReceiveCount ?? 1;
         const visibilitySeconds = Math.min(Math.pow(2, attempt) * 5, 300);
@@ -85,7 +85,7 @@ export class SqsConsumer {
     }
   }
 
-  // Item D: Paralelismo inteligente por MessageGroupId
+  // Concurrency grouped by messageGroupId (maintains strict FIFO per wallet/group)
   public async handleBatch(
     messages: SqsMessage[]
   ): Promise<Array<{ messageId: string; acknowledged: boolean; alreadyProcessed?: boolean }>> {
@@ -93,7 +93,7 @@ export class SqsConsumer {
       return [];
     }
 
-    // Agrupa mensagens por MessageGroupId (ou fallback para messageId)
+    // Partition batch by group
     const groups = new Map<string, SqsMessage[]>();
     for (const msg of messages) {
       const key = msg.messageGroupId ?? msg.messageId;
@@ -102,7 +102,7 @@ export class SqsConsumer {
       groups.set(key, list);
     }
 
-    // Processa carteiras/grupos distintos em paralelo, garantindo ordem estrita dentro de cada grupo
+    // Process different groups concurrently, preserve sequence within each group
     const groupResults = await Promise.all(
       Array.from(groups.values()).map(async (group) => {
         const results: Array<{ messageId: string; acknowledged: boolean; alreadyProcessed?: boolean }> = [];

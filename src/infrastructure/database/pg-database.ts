@@ -32,7 +32,7 @@ export class PostgresDatabaseService implements IDatabaseService {
   public async transaction<T>(callback: (client: SqlExecutor) => Promise<T>): Promise<T> {
     if (this.pglite) {
       return await this.pglite.transaction(async (tx) => {
-        // Safe lock timeout per transaction to prevent indefinite contention and pool exhaustion (Error 55P03)
+        // Abort locks waiting over 2s to prevent pool starvation
         await tx.query("SELECT set_config('lock_timeout', '2000ms', true)");
 
         const executor: SqlExecutor = {
@@ -49,7 +49,7 @@ export class PostgresDatabaseService implements IDatabaseService {
       const client = await this.pool.connect();
       try {
         await client.query("BEGIN");
-        // Safe lock timeout per transaction to prevent indefinite contention and pool exhaustion (Error 55P03)
+        // Abort locks waiting over 2s to prevent pool starvation
         await client.query("SELECT set_config('lock_timeout', '2000ms', true)");
 
         const executor: SqlExecutor = {

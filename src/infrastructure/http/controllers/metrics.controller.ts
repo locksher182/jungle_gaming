@@ -13,3 +13,4 @@ export class MetricsController {
     return res.status(HttpStatus.OK).send(metrics);
   }
 }
+

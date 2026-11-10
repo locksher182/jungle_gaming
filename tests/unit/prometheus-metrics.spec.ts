@@ -24,3 +24,4 @@ describe("Prometheus Metrics (/metrics)", () => {
     expect(metricsOutput).toContain("jg_wagering_idempotent_replays_total");
   });
 });
+

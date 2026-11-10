@@ -6,13 +6,13 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
   it("deve executar 3 instâncias HTTP reais em portas distintas simultaneamente sem corrupção contábil", async () => {
     const ctx = await createTestContext();
 
-    // Cria carteira compartilhada no banco
+    // Shared wallet under test
     const initialWallet = await ctx.createWalletUseCase.execute({
       playerId: "player-cluster-3inst",
       initialBalance: { amount: "1000.00", currency: "BRL" },
     });
 
-    // Sobe 3 servidores HTTP reais em portas distintas utilizando Bun.serve
+    // Spin up 3 HTTP listeners on separate ports
     const ports = [3101, 3102, 3103];
     const servers = ports.map((port) => {
       return Bun.serve({
@@ -38,7 +38,7 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
     });
 
     try {
-      // Dispara 30 requisições simultâneas distribuídas entre as 3 instâncias reais
+      // Round-robin 30 concurrent transactions across nodes
       const requests = Array.from({ length: 30 }, (_, i) => {
         const assignedPort = ports[i % ports.length];
         const isBet = i % 2 === 0;
@@ -64,11 +64,11 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
 
       const responses = await Promise.all(requests);
 
-      // Todas as 30 transações devem ser processadas com sucesso
+      // Verify every node processed cleanly
       expect(responses.length).toBe(30);
       expect(responses.every((r) => r.status === WagerTransactionStatus.Processed)).toBe(true);
 
-      // Audita a invariante final via endpoint de reconciliação na instância 3101
+      // Audit balance invariant against ledger
       const reconRes = await fetch(
         `http://localhost:3101/wallets/${initialWallet.id}/reconciliation`,
         { method: "POST" }
@@ -76,13 +76,13 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
 
       expect(reconRes.consistent).toBe(true);
       expect(reconRes.anomalyDetected).toBe(false);
-      // 1000 inicial - (15 apostas * 10) + (15 vitórias * 10) = 1000.00
+      // 1000 base - (15 bets * 10) + (15 wins * 10) = 1000.00
       expect(reconRes.storedBalance.amount).toBe("1000.00");
       expect(reconRes.calculatedBalance.amount).toBe("1000.00");
-      // 1 opening + 30 transações = 31 lançamentos no ledger
+      // 1 opening + 30 transactions = 31 ledger entries
       expect(reconRes.ledgerEntriesCount).toBe(31);
     } finally {
-      // Encerra graciosamente todos os servidores
+      // Teardown listeners
       for (const s of servers) {
         s.stop(true);
       }

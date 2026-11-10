@@ -67,3 +67,4 @@ export class PrometheusService {
     return this.registry.contentType;
   }
 }
+

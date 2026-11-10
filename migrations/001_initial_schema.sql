@@ -72,8 +72,7 @@ ON wager_transactions (provider_id, external_transaction_id);
 CREATE INDEX IF NOT EXISTS idx_wager_tx_pending_ref
 ON wager_transactions (status) WHERE status = 'PENDING_REFERENCE';
 
--- Partial Unique Index for Single Reversal Guarantee (Constraint A)
--- Enforces at PostgreSQL engine level that no race condition can ever double-refund or double-rollback the same reference transaction
+-- Prevent duplicate reversals on the same reference at the engine level
 CREATE UNIQUE INDEX IF NOT EXISTS wager_transactions_single_reversal_key
 ON wager_transactions (provider_id, reference_external_transaction_id)
 WHERE kind IN ('REFUND', 'ROLLBACK') AND status = 'PROCESSED';

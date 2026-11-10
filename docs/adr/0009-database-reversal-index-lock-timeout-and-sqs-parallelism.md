@@ -29,3 +29,4 @@ Implementar o conjunto de melhorias de alta resiliência:
 
 ## Consequências
 * **Positivas:** Nível de resiliência e integridade financeira no estado da arte; conformidade impecável com os critérios de avaliação técnica da banca.
+

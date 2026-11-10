@@ -119,3 +119,4 @@ describe("SqsConsumer - Paralelismo por MessageGroupId e Backoff de Visibilidade
     expect(visibilityAdjusted!.seconds).toBe(40);
   });
 });
+
