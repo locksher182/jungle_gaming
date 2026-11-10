@@ -62,6 +62,7 @@ export class CreateWalletUseCase {
           money: initialMoney,
         });
         openingTx.markProcessed(undefined, wallet.createdAt);
+        openingTx.recordObservedBalance(initialMoney);
         await uow.wagerTransactions.save(openingTx);
 
         const zero = Money.zero(initialMoney.currency);

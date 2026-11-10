@@ -61,11 +61,17 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
       INSERT INTO wager_transactions (
         id, provider_id, external_transaction_id, idempotency_key, payload_hash,
         wallet_id, player_id, round_id, game_id, kind, amount, currency,
-        reference_external_transaction_id, status, rejection_reason, processed_at,
+        reference_external_transaction_id, reference_transaction_id,
+        balance_amount, balance_currency, pending_attempts,
+        status, rejection_reason, processed_at,
         created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
       ) ON CONFLICT (id) DO UPDATE SET
+        reference_transaction_id = EXCLUDED.reference_transaction_id,
+        balance_amount = EXCLUDED.balance_amount,
+        balance_currency = EXCLUDED.balance_currency,
+        pending_attempts = EXCLUDED.pending_attempts,
         status = EXCLUDED.status,
         rejection_reason = EXCLUDED.rejection_reason,
         processed_at = EXCLUDED.processed_at,
@@ -85,6 +91,10 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
       tx.money.toJSON().amount,
       tx.money.currency,
       tx.referenceExternalTransactionId ?? null,
+      tx.referenceTransactionId ?? null,
+      tx.observedBalance ? tx.observedBalance.toJSON().amount : null,
+      tx.observedBalance ? tx.observedBalance.currency : null,
+      tx.pendingAttempts,
       tx.status,
       tx.rejectionReason ?? null,
       tx.processedAt ?? null,
@@ -95,6 +105,14 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
 
   private mapToDomain(row: any): WagerTransaction {
     const amountStr = new Decimal(row.amount).toFixed(2);
+    let observedBalance: Money | undefined = undefined;
+    if (row.balance_amount !== null && row.balance_amount !== undefined && row.balance_currency) {
+      observedBalance = Money.from({
+        amount: new Decimal(row.balance_amount).toFixed(2),
+        currency: row.balance_currency,
+      });
+    }
+
     return WagerTransaction.rehydrate({
       id: row.id,
       providerId: row.provider_id,
@@ -108,8 +126,11 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
       kind: row.kind as WagerTransactionKind,
       money: Money.from({ amount: amountStr, currency: row.currency }),
       referenceExternalTransactionId: row.reference_external_transaction_id ?? undefined,
+      referenceTransactionId: row.reference_transaction_id ?? undefined,
       status: row.status as WagerTransactionStatus,
       rejectionReason: row.rejection_reason ?? undefined,
+      observedBalance,
+      pendingAttempts: row.pending_attempts ? parseInt(row.pending_attempts, 10) : 0,
       processedAt: row.processed_at ? new Date(row.processed_at) : undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),

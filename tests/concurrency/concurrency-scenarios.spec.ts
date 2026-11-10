@@ -264,9 +264,15 @@ describe("Testes de Concorrência e Resiliência", () => {
       },
     };
 
-    // Two publisher workers running concurrently
-    const pubWorker1 = ctx.outboxPublisher;
-    const pubWorker2 = ctx.outboxPublisher;
+    // Two distinct publisher worker instances running concurrently with real event dispatch
+    const pubWorker1 = new (ctx.outboxPublisher.constructor as any)(
+      ctx.transactionRunner,
+      eventPublisher
+    );
+    const pubWorker2 = new (ctx.outboxPublisher.constructor as any)(
+      ctx.transactionRunner,
+      eventPublisher
+    );
 
     const [count1, count2] = await Promise.all([
       pubWorker1.publishBatch(10),
@@ -274,6 +280,7 @@ describe("Testes de Concorrência e Resiliência", () => {
     ]);
 
     expect(count1 + count2).toBe(4);
+    expect(publishedPayloads.length).toBe(4);
   });
 
   it("Cenário 7: Mensagens fora de ordem - REFUND ou ROLLBACK entregue antes da BET -> PENDING_REFERENCE e reconciliação posterior", async () => {

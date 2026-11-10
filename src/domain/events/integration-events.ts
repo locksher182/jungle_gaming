@@ -5,6 +5,7 @@ export interface IntegrationEventProps<T> {
   eventId?: string;
   aggregateId: string;
   correlationId?: string;
+  causationId?: string;
   occurredAt?: Date;
   data: T;
 }
@@ -13,6 +14,7 @@ export abstract class IntegrationEvent<T> {
   public readonly eventId: string;
   public readonly aggregateId: string;
   public readonly correlationId: string | undefined;
+  public readonly causationId: string | undefined;
   public readonly occurredAt: Date;
   public readonly data: T;
   public abstract readonly eventType: string;
@@ -22,6 +24,7 @@ export abstract class IntegrationEvent<T> {
     this.eventId = props.eventId ?? crypto.randomUUID();
     this.aggregateId = props.aggregateId;
     this.correlationId = props.correlationId;
+    this.causationId = props.causationId;
     this.occurredAt = props.occurredAt ?? new Date();
     this.data = props.data;
   }
@@ -32,6 +35,7 @@ export abstract class IntegrationEvent<T> {
     version: number;
     aggregateId: string;
     correlationId: string | undefined;
+    causationId: string | undefined;
     occurredAt: string;
     data: T;
   } {
@@ -41,6 +45,7 @@ export abstract class IntegrationEvent<T> {
       version: this.version,
       aggregateId: this.aggregateId,
       correlationId: this.correlationId,
+      causationId: this.causationId,
       occurredAt: this.occurredAt.toISOString(),
       data: this.data,
     };
@@ -57,9 +62,44 @@ export interface WalletBalanceChangedData {
   walletVersion: number;
 }
 
+export interface EventContext {
+  correlationId?: string;
+  causationId?: string;
+}
+
 export class WalletBalanceChanged extends IntegrationEvent<WalletBalanceChangedData> {
   public readonly eventType = "WalletBalanceChanged";
   public readonly version = 1;
+
+  public static from(
+    wallet: { id: string; version: number },
+    entry: {
+      transactionId: string;
+      direction: LedgerDirection;
+      money: { toJSON: () => MoneyProps };
+      balanceBefore: { toJSON: () => MoneyProps };
+      balanceAfter: { toJSON: () => MoneyProps };
+      createdAt: Date;
+    },
+    ctx?: EventContext
+  ): WalletBalanceChanged {
+    return new WalletBalanceChanged({
+      eventId: crypto.randomUUID(),
+      aggregateId: wallet.id,
+      correlationId: ctx?.correlationId ?? entry.transactionId,
+      causationId: ctx?.causationId,
+      occurredAt: entry.createdAt,
+      data: {
+        walletId: wallet.id,
+        transactionId: entry.transactionId,
+        direction: entry.direction,
+        money: entry.money.toJSON(),
+        balanceBefore: entry.balanceBefore.toJSON(),
+        balanceAfter: entry.balanceAfter.toJSON(),
+        walletVersion: wallet.version,
+      },
+    });
+  }
 }
 
 export interface WagerTransactionProcessedData {

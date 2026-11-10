@@ -13,8 +13,13 @@ export class DomainExceptionFilter implements ExceptionFilter {
 
     if (exception.code === "IDEMPOTENCY_CONFLICT") {
       status = HttpStatus.CONFLICT; // 409
-    } else if (exception.code === "WALLET_NOT_FOUND") {
+    } else if (
+      exception.code === "WALLET_NOT_FOUND" ||
+      exception.code === "TRANSACTION_NOT_FOUND"
+    ) {
       status = HttpStatus.NOT_FOUND; // 404
+    } else if (exception.code === "INTERNAL_OPERATION_NOT_ALLOWED") {
+      status = HttpStatus.FORBIDDEN; // 403
     } else if (
       exception.code === "INSUFFICIENT_FUNDS" ||
       exception.code === "REVERSAL_WOULD_CAUSE_NEGATIVE_BALANCE" ||

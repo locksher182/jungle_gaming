@@ -1,4 +1,4 @@
-import { Registry, Counter, Histogram, collectDefaultMetrics } from "prom-client";
+import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from "prom-client";
 
 export class PrometheusService {
   private static instance: PrometheusService;
@@ -9,6 +9,12 @@ export class PrometheusService {
   public readonly transactionDurationSeconds: Histogram<string>;
   public readonly outboxPublishedTotal: Counter<string>;
   public readonly reconciliationTotal: Counter<string>;
+
+  // Required metrics per Section 12:
+  public readonly retriesTotal: Counter<string>;
+  public readonly dlqMessagesTotal: Counter<string>;
+  public readonly lockConflictsTotal: Counter<string>;
+  public readonly outboxLag: Gauge<string>;
 
   private constructor() {
     this.registry = new Registry();
@@ -48,6 +54,33 @@ export class PrometheusService {
       name: "jg_wallet_reconciliations_total",
       help: "Total wallet reconciliation checks performed",
       labelNames: ["consistent"],
+      registers: [this.registry],
+    });
+
+    this.retriesTotal = new Counter({
+      name: "jg_retries_total",
+      help: "Total number of retry attempts executed",
+      labelNames: ["operation", "reason"],
+      registers: [this.registry],
+    });
+
+    this.dlqMessagesTotal = new Counter({
+      name: "jg_dlq_messages_total",
+      help: "Total count of messages routed to Dead Letter Queue (DLQ)",
+      labelNames: ["queue", "reason"],
+      registers: [this.registry],
+    });
+
+    this.lockConflictsTotal = new Counter({
+      name: "jg_lock_conflicts_total",
+      help: "Total count of lock contention or retry conflicts encountered",
+      labelNames: ["resource"],
+      registers: [this.registry],
+    });
+
+    this.outboxLag = new Gauge({
+      name: "jg_outbox_lag",
+      help: "Current number of unpublished pending integration events in outbox",
       registers: [this.registry],
     });
   }

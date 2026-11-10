@@ -1,3 +1,5 @@
+import { PrometheusService } from "../../infrastructure/observability/prometheus-metrics";
+
 export interface RetryOptions {
   maxRetries?: number;
   minDelayMs?: number;
@@ -39,6 +41,16 @@ export async function retryWithJitter<T>(
       return await operation();
     } catch (error) {
       attempt++;
+      try {
+        const prom = PrometheusService.getInstance();
+        prom.retriesTotal.inc({ operation: "transactionRunner", reason: "transient_db_error" });
+        const msg = String((error as any)?.message || "");
+        if (msg.includes("lock") || (error as any)?.code === "55P03") {
+          prom.lockConflictsTotal.inc({ resource: "wallet" });
+        }
+      } catch {
+        // non-blocking
+      }
       if (attempt > maxRetries || !shouldRetry(error)) {
         throw error;
       }

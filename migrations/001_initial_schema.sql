@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS wager_transactions (
     amount NUMERIC(18, 2) NOT NULL,
     currency VARCHAR(3) NOT NULL,
     reference_external_transaction_id VARCHAR(128),
+    reference_transaction_id VARCHAR(64),
+    balance_amount NUMERIC(18, 2),
+    balance_currency VARCHAR(3),
+    pending_attempts INT NOT NULL DEFAULT 0,
     status VARCHAR(20) NOT NULL,
     rejection_reason VARCHAR(255),
     processed_at TIMESTAMPTZ,
@@ -72,9 +76,9 @@ ON wager_transactions (provider_id, external_transaction_id);
 CREATE INDEX IF NOT EXISTS idx_wager_tx_pending_ref
 ON wager_transactions (status) WHERE status = 'PENDING_REFERENCE';
 
--- Prevent duplicate reversals on the same reference at the engine level
+-- Prevent duplicate reversals on the same reference by the same operation kind
 CREATE UNIQUE INDEX IF NOT EXISTS wager_transactions_single_reversal_key
-ON wager_transactions (provider_id, reference_external_transaction_id)
+ON wager_transactions (provider_id, reference_external_transaction_id, kind)
 WHERE kind IN ('REFUND', 'ROLLBACK') AND status = 'PROCESSED';
 
 -- 4. Transactional Inbox

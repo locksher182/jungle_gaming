@@ -4,6 +4,9 @@ import {
   WagerTransactionKind,
   WagerTransactionStatus,
 } from "../../src/domain/models/wager-transaction";
+import { PgTransactionRunner } from "../../src/infrastructure/database/pg-unit-of-work";
+import { ProcessWagerTransactionUseCase } from "../../src/application/use-cases/process-wager-transaction.use-case";
+import { ReconcileWalletUseCase } from "../../src/application/use-cases/reconcile-wallet.use-case";
 
 describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () => {
   it("deve executar 3 instâncias HTTP reais em portas distintas simultaneamente sem corrupção contábil", async () => {
@@ -15,17 +18,24 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
       initialBalance: { amount: "1000.00", currency: "BRL" },
     });
 
-    // Spin up 3 HTTP listeners on separate ports
+    // Spin up 3 HTTP listeners on separate ports, each with its own independent Application/UseCase instance
     const ports = [3101, 3102, 3103];
-    const servers = ports.map((port) => {
+    const nodes = ports.map((port) => {
+      const runner = new PgTransactionRunner(ctx.dbService);
+      const useCase = new ProcessWagerTransactionUseCase(runner);
+      const reconcileCase = new ReconcileWalletUseCase(runner);
+      return { port, runner, useCase, reconcileCase };
+    });
+
+    const servers = nodes.map((node) => {
       return Bun.serve({
-        port,
+        port: node.port,
         async fetch(req) {
           const url = new URL(req.url);
           if (url.pathname === "/wagering/transactions" && req.method === "POST") {
             const body = (await req.json()) as Record<string, any>;
             const idempHeader = req.headers.get("Idempotency-Key") || undefined;
-            const res = await ctx.processWagerTxUseCase.execute({
+            const res = await node.useCase.execute({
               ...body,
               idempotencyKey: idempHeader,
             } as any);
@@ -35,7 +45,7 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
             url.pathname === `/wallets/${initialWallet.id}/reconciliation` &&
             req.method === "POST"
           ) {
-            const recon = await ctx.reconcileWalletUseCase.execute(initialWallet.id);
+            const recon = await node.reconcileCase.execute(initialWallet.id);
             return Response.json(recon);
           }
           return new Response("Not Found", { status: 404 });

@@ -21,6 +21,7 @@ export interface SqsQueueClient {
 
 export class SqsConsumer {
   private isShuttingDown = false;
+  private inFlightCount = 0;
 
   constructor(
     private readonly consumerName: string,
@@ -33,13 +34,19 @@ export class SqsConsumer {
     message: SqsMessage
   ): Promise<{ acknowledged: boolean; alreadyProcessed?: boolean }> {
     if (this.isShuttingDown) {
+      if (this.sqsClient?.changeMessageVisibility && message.receiptHandle) {
+        // Return visibility immediately so other instances can take over
+        await this.sqsClient.changeMessageVisibility(message.receiptHandle, 0).catch(() => {});
+      }
       return { acknowledged: false };
     }
 
-    const payload: ProcessWagerTransactionDto = JSON.parse(message.body);
-    const payloadHash = computeCanonicalPayloadHash(payload);
-
+    this.inFlightCount++;
     try {
+      const raw = JSON.parse(message.body);
+      const payload: ProcessWagerTransactionDto = raw.data ?? raw;
+      const payloadHash = computeCanonicalPayloadHash(payload);
+
       // 1. Transactional Inbox check & execution inside the same SQL transaction
       const shouldAck = await this.transactionRunner.run(async (uow) => {
         const inboxMsg = InboxMessage.receive({
@@ -82,6 +89,8 @@ export class SqsConsumer {
         }
       }
       throw error;
+    } finally {
+      this.inFlightCount--;
     }
   }
 
@@ -125,7 +134,11 @@ export class SqsConsumer {
     return groupResults.flat();
   }
 
-  public shutdown(): void {
+  public async shutdown(): Promise<void> {
     this.isShuttingDown = true;
+    const start = Date.now();
+    while (this.inFlightCount > 0 && Date.now() - start < 5000) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
   }
 }

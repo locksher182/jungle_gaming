@@ -10,6 +10,8 @@
     "test:unit": "bun test tests/unit",
     "test:integration": "bun test tests/integration",
     "test:concurrency": "bun test tests/concurrency",
+    "test:e2e": "bun test tests/integration/real-docker-container.spec.ts",
+    "test:load": "bun test tests/concurrency/concurrency-scenarios.spec.ts",
     "format": "bun fmt",
     "format:check": "bun fmt --check"
   },
@@ -22,6 +24,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1166.0",
     "@electric-sql/pglite": "0.5.16",
     "@nestjs/common": "12.4.2",
     "@nestjs/core": "12.4.2",

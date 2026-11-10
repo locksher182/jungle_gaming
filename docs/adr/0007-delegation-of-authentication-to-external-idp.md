@@ -11,9 +11,10 @@ The core domain of this microservice is high-throughput wagering transaction pro
 
 Delegate caller authentication to the perimeter layer and external Identity Providers:
 
-1. Health and operational endpoints (`/health/live`, `/health/ready`, `/metrics`) remain accessible for orchestration and monitoring systems.
-2. In production, upstream API gateways (e.g., Kong, Envoy, AWS API Gateway) or an enterprise IdP (e.g., Keycloak, Cognito) authenticate callers, validate tokens, and pass trusted identity context to downstream services.
-3. The internal service focuses strictly on business transaction validation, player balance integrity, and idempotency.
+1. Health and operational endpoints (`/health/live`, `/health/ready`, `/metrics`) remain accessible for orchestration and monitoring systems without credentials.
+2. In production, upstream API gateways or an enterprise IdP (e.g., Keycloak, Zitadel) authenticate callers, validate tokens, and pass trusted identity context to downstream services.
+3. The codebase establishes formal extension points via `IProviderIdentityPort` (`src/application/ports/provider-identity.port.ts`) and `NoOpAuthGuard` (`src/infrastructure/http/guards/noop-auth.guard.ts`) applied across all wagering and wallet controllers, ready for drop-in OIDC/JWT verification.
+4. The internal service focuses strictly on business transaction validation, player balance integrity, and idempotency.
 
 ## Alternatives Considered
 

@@ -34,7 +34,9 @@ export interface ProcessWagerTransactionDto {
 export interface ProcessWagerTransactionResult {
   transaction: WagerTransaction;
   isReplay: boolean;
+  idempotentReplay: boolean;
   status: WagerTransactionStatus;
+  balance?: MoneyProps;
   rejectionReason?: string;
 }
 
@@ -45,6 +47,13 @@ export class ProcessWagerTransactionUseCase {
     dto: ProcessWagerTransactionDto,
     existingUow?: IUnitOfWork
   ): Promise<ProcessWagerTransactionResult> {
+    if (dto.kind === WagerTransactionKind.Opening) {
+      throw new DomainError(
+        "OPENING transactions are internal and cannot be submitted via API or queue",
+        "INTERNAL_OPERATION_NOT_ALLOWED"
+      );
+    }
+
     const money = Money.from(dto.money);
     const idempotencyKey =
       dto.idempotencyKey?.trim() || `${dto.providerId}:${dto.externalTransactionId}`;
@@ -70,7 +79,9 @@ export class ProcessWagerTransactionUseCase {
           return {
             transaction: existing,
             isReplay: true,
+            idempotentReplay: true,
             status: existing.status,
+            balance: existing.observedBalance?.toJSON(),
             rejectionReason: existing.rejectionReason,
           };
         }
@@ -119,18 +130,22 @@ export class ProcessWagerTransactionUseCase {
         case WagerTransactionKind.Bet: {
           if (wallet.balance.isLessThan(money)) {
             tx.reject("INSUFFICIENT_FUNDS");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "INSUFFICIENT_FUNDS");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "INSUFFICIENT_FUNDS",
             };
           }
 
           const ledger = wallet.debit({ transactionId: tx.id, amount: money });
           tx.markProcessed();
+          tx.recordObservedBalance(wallet.balance);
 
           await uow.wallets.save(wallet);
           await uow.ledger.save(ledger);
@@ -142,13 +157,16 @@ export class ProcessWagerTransactionUseCase {
           return {
             transaction: tx,
             isReplay: false,
+            idempotentReplay: false,
             status: WagerTransactionStatus.Processed,
+            balance: wallet.balance.toJSON(),
           };
         }
 
         case WagerTransactionKind.Win: {
           const ledger = wallet.credit({ transactionId: tx.id, amount: money });
           tx.markProcessed();
+          tx.recordObservedBalance(wallet.balance);
 
           await uow.wallets.save(wallet);
           await uow.ledger.save(ledger);
@@ -160,19 +178,24 @@ export class ProcessWagerTransactionUseCase {
           return {
             transaction: tx,
             isReplay: false,
+            idempotentReplay: false,
             status: WagerTransactionStatus.Processed,
+            balance: wallet.balance.toJSON(),
           };
         }
 
         case WagerTransactionKind.Loss: {
           tx.markProcessed();
+          tx.recordObservedBalance(wallet.balance);
           await uow.wagerTransactions.save(tx);
           await this.enqueueProcessedEvent(uow, tx);
 
           return {
             transaction: tx,
             isReplay: false,
+            idempotentReplay: false,
             status: WagerTransactionStatus.Processed,
+            balance: wallet.balance.toJSON(),
           };
         }
 
@@ -189,18 +212,22 @@ export class ProcessWagerTransactionUseCase {
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.PendingReference,
             };
           }
 
           if (refTx.status !== WagerTransactionStatus.Processed) {
             tx.reject("REFERENCE_NOT_PROCESSED");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "REFERENCE_NOT_PROCESSED");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "REFERENCE_NOT_PROCESSED",
             };
           }
@@ -213,12 +240,15 @@ export class ProcessWagerTransactionUseCase {
             !refTx.money.equals(money)
           ) {
             tx.reject("INVALID_REFERENCE");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "INVALID_REFERENCE");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "INVALID_REFERENCE",
             };
           }
@@ -227,20 +257,24 @@ export class ProcessWagerTransactionUseCase {
             dto.providerId,
             dto.referenceExternalTransactionId!
           );
-          if (reversals.length > 0) {
+          if (reversals.some((r) => r.kind === WagerTransactionKind.Refund)) {
             tx.reject("TRANSACTION_ALREADY_REVERSED");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "TRANSACTION_ALREADY_REVERSED");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "TRANSACTION_ALREADY_REVERSED",
             };
           }
 
           const ledger = wallet.credit({ transactionId: tx.id, amount: money });
-          tx.markProcessed();
+          tx.markProcessed(refTx.id);
+          tx.recordObservedBalance(wallet.balance);
 
           await uow.wallets.save(wallet);
           await uow.ledger.save(ledger);
@@ -252,7 +286,9 @@ export class ProcessWagerTransactionUseCase {
           return {
             transaction: tx,
             isReplay: false,
+            idempotentReplay: false,
             status: WagerTransactionStatus.Processed,
+            balance: wallet.balance.toJSON(),
           };
         }
 
@@ -269,18 +305,22 @@ export class ProcessWagerTransactionUseCase {
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.PendingReference,
             };
           }
 
           if (refTx.status !== WagerTransactionStatus.Processed) {
             tx.reject("REFERENCE_NOT_PROCESSED");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "REFERENCE_NOT_PROCESSED");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "REFERENCE_NOT_PROCESSED",
             };
           }
@@ -292,12 +332,15 @@ export class ProcessWagerTransactionUseCase {
             !refTx.money.equals(money)
           ) {
             tx.reject("INVALID_REFERENCE");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "INVALID_REFERENCE");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "INVALID_REFERENCE",
             };
           }
@@ -306,14 +349,17 @@ export class ProcessWagerTransactionUseCase {
             dto.providerId,
             dto.referenceExternalTransactionId!
           );
-          if (reversals.length > 0) {
+          if (reversals.some((r) => r.kind === WagerTransactionKind.Rollback)) {
             tx.reject("TRANSACTION_ALREADY_REVERSED");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "TRANSACTION_ALREADY_REVERSED");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "TRANSACTION_ALREADY_REVERSED",
             };
           }
@@ -327,29 +373,36 @@ export class ProcessWagerTransactionUseCase {
           ) {
             if (wallet.balance.isLessThan(money)) {
               tx.reject("REVERSAL_WOULD_CAUSE_NEGATIVE_BALANCE");
+              tx.recordObservedBalance(wallet.balance);
               await uow.wagerTransactions.save(tx);
               await this.enqueueRejectedEvent(uow, tx, "REVERSAL_WOULD_CAUSE_NEGATIVE_BALANCE");
               return {
                 transaction: tx,
                 isReplay: false,
+                idempotentReplay: false,
                 status: WagerTransactionStatus.Rejected,
+                balance: wallet.balance.toJSON(),
                 rejectionReason: "REVERSAL_WOULD_CAUSE_NEGATIVE_BALANCE",
               };
             }
             ledger = wallet.debit({ transactionId: tx.id, amount: money });
           } else {
             tx.reject("CANNOT_ROLLBACK_KIND");
+            tx.recordObservedBalance(wallet.balance);
             await uow.wagerTransactions.save(tx);
             await this.enqueueRejectedEvent(uow, tx, "CANNOT_ROLLBACK_KIND");
             return {
               transaction: tx,
               isReplay: false,
+              idempotentReplay: false,
               status: WagerTransactionStatus.Rejected,
+              balance: wallet.balance.toJSON(),
               rejectionReason: "CANNOT_ROLLBACK_KIND",
             };
           }
 
-          tx.markProcessed();
+          tx.markProcessed(refTx.id);
+          tx.recordObservedBalance(wallet.balance);
           await uow.wallets.save(wallet);
           await uow.ledger.save(ledger);
           await uow.wagerTransactions.save(tx);
@@ -360,7 +413,9 @@ export class ProcessWagerTransactionUseCase {
           return {
             transaction: tx,
             isReplay: false,
+            idempotentReplay: false,
             status: WagerTransactionStatus.Processed,
+            balance: wallet.balance.toJSON(),
           };
         }
 

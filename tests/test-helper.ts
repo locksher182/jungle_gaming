@@ -7,6 +7,8 @@ import { CreateWalletUseCase } from "../src/application/use-cases/create-wallet.
 import { ProcessWagerTransactionUseCase } from "../src/application/use-cases/process-wager-transaction.use-case";
 import { ReconcileWalletUseCase } from "../src/application/use-cases/reconcile-wallet.use-case";
 import { GetWalletLedgerUseCase } from "../src/application/use-cases/get-wallet-ledger.use-case";
+import { GetWalletUseCase } from "../src/application/use-cases/get-wallet.use-case";
+import { GetTransactionUseCase } from "../src/application/use-cases/get-transaction.use-case";
 import { SqsConsumer } from "../src/infrastructure/messaging/sqs-consumer";
 import { OutboxPublisher } from "../src/infrastructure/messaging/outbox-publisher";
 import { PendingReferenceReconciler } from "../src/infrastructure/messaging/pending-reference-reconciler";
@@ -19,6 +21,8 @@ export interface TestContext {
   processWagerTxUseCase: ProcessWagerTransactionUseCase;
   reconcileWalletUseCase: ReconcileWalletUseCase;
   getWalletLedgerUseCase: GetWalletLedgerUseCase;
+  getWalletUseCase: GetWalletUseCase;
+  getTransactionUseCase: GetTransactionUseCase;
   sqsConsumer: SqsConsumer;
   outboxPublisher: OutboxPublisher;
   pendingReferenceReconciler: PendingReferenceReconciler;
@@ -36,6 +40,8 @@ export async function createTestContext(): Promise<TestContext> {
   const processWagerTxUseCase = new ProcessWagerTransactionUseCase(transactionRunner);
   const reconcileWalletUseCase = new ReconcileWalletUseCase(transactionRunner);
   const getWalletLedgerUseCase = new GetWalletLedgerUseCase(transactionRunner);
+  const getWalletUseCase = new GetWalletUseCase(transactionRunner);
+  const getTransactionUseCase = new GetTransactionUseCase(transactionRunner);
   const sqsConsumer = new SqsConsumer(
     "test-wager-consumer",
     transactionRunner,
@@ -52,6 +58,8 @@ export async function createTestContext(): Promise<TestContext> {
     processWagerTxUseCase,
     reconcileWalletUseCase,
     getWalletLedgerUseCase,
+    getWalletUseCase,
+    getTransactionUseCase,
     sqsConsumer,
     outboxPublisher,
     pendingReferenceReconciler,
