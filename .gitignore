@@ -1,0 +1,49 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# secrets & keys
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# database dumps / local data
+*.sql.gz
+*.dump
+postgres_data/
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

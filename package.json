@@ -1,0 +1,34 @@
+{
+  "name": "jg",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/main.ts",
+    "typecheck": "bun check",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:concurrency": "bun test tests/concurrency",
+    "format": "bun fmt",
+    "format:check": "bun fmt --check"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/express": "5.0.6",
+    "@types/pg": "8.23.1"
+  },
+  "peerDependencies": {
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.16",
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
+    "@nestjs/platform-express": "12.4.2",
+    "decimal.js": "10.6.0",
+    "pg": "8.23.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  }
+}
