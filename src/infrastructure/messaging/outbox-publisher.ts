@@ -10,7 +10,7 @@ export class OutboxPublisher {
   constructor(
     private readonly transactionRunner: ITransactionRunner,
     private readonly eventPublisher?: IEventPublisher
-  ) {}
+  ) { }
 
   public async publishBatch(batchSize: number = 50): Promise<number> {
     // Phase 1: Claim due messages inside a short database transaction with SKIP LOCKED
