@@ -87,3 +87,4 @@ Este documento atua como a especificação formal e imutável dos contratos comp
 ### Cenário 8: Invariante Final
 * **Contrato:** Após todas as baterias de operações de teste:
   $$\forall \text{ wallet} \in \text{Database}, \quad \text{wallet.balance} == \sum_{e \in \text{ledger}} \text{direction}(e) \times e.\text{money}$$
+

@@ -22,3 +22,4 @@ Implementar os padrões **Transactional Inbox** e **Transactional Outbox**:
 ## Consequências
 * **Positivas:** Consistência transacional estrita (at-least-once delivery com deduplicação at-most-once no destino).
 * **Mitigação:** Pequena latência assíncrona entre o commit no banco e a publicação efetiva no broker pelo poller da outbox.
+

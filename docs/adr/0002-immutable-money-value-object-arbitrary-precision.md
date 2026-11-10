@@ -20,3 +20,4 @@ Implementar o Value Object `Money` utilizando a biblioteca de precisão arbitrá
 ## Consequências
 * **Positivas:** Correção financeira absoluta, impossibilidade de criar valores monetários inválidos ou operar moedas distintas acidentalmente.
 * **Mitigação:** Requer serialização/desserialização explícita nas bordas do sistema (DTOs de entrada e saída).
+

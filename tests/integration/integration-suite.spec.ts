@@ -192,4 +192,59 @@ describe("Testes de Integração e Garantias de Banco (Seção 13)", () => {
     expect(conflictError).toBeInstanceOf(DomainError);
     expect(conflictError.code).toBe("IDEMPOTENCY_CONFLICT");
   });
+
+  it("Garantia DDL 4: Banco deve impedir reversão dupla (Partial Unique Index no PostgreSQL)", async () => {
+    const wallet = await ctx.createWalletUseCase.execute({
+      playerId: "player-reversal-idx",
+      initialBalance: { amount: "100.00", currency: "BRL" },
+    });
+
+    // 1. Process Bet
+    await ctx.processWagerTxUseCase.execute({
+      providerId: "prov-rev",
+      externalTransactionId: "bet-original",
+      playerId: wallet.playerId,
+      walletId: wallet.id,
+      roundId: "r-rev",
+      gameId: "g-rev",
+      kind: WagerTransactionKind.Bet,
+      money: { amount: "30.00", currency: "BRL" },
+    });
+
+    // 2. First refund is processed successfully
+    const refundRes = await ctx.processWagerTxUseCase.execute({
+      providerId: "prov-rev",
+      externalTransactionId: "refund-1",
+      playerId: wallet.playerId,
+      walletId: wallet.id,
+      roundId: "r-rev",
+      gameId: "g-rev",
+      kind: WagerTransactionKind.Refund,
+      money: { amount: "30.00", currency: "BRL" },
+      referenceExternalTransactionId: "bet-original",
+    });
+    expect(refundRes.status).toBe(WagerTransactionStatus.Processed);
+
+    // 3. Attempt direct SQL insertion of a second PROCESSED refund for the same reference
+    let duplicateError: any = null;
+    try {
+      await ctx.pglite.query(
+        `INSERT INTO wager_transactions (
+          id, provider_id, external_transaction_id, idempotency_key, payload_hash,
+          wallet_id, player_id, round_id, game_id, kind, amount, currency,
+          reference_external_transaction_id, status, created_at, updated_at
+        ) VALUES (
+          'tx-dup-rev', 'prov-rev', 'refund-2', 'prov-rev:refund-2', 'hash-rev-2',
+          $1, $2, 'r-rev', 'g-rev', 'REFUND', 30.00, 'BRL',
+          'bet-original', 'PROCESSED', NOW(), NOW()
+        )`,
+        [wallet.id, wallet.playerId]
+      );
+    } catch (err) {
+      duplicateError = err;
+    }
+
+    expect(duplicateError).toBeDefined();
+    expect(String(duplicateError.message)).toContain("wager_transactions_single_reversal_key");
+  });
 });

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { WalletsController } from "./infrastructure/http/controllers/wallets.controller";
 import { WageringController } from "./infrastructure/http/controllers/wagering.controller";
 import { HealthController } from "./infrastructure/http/controllers/health.controller";
+import { MetricsController } from "./infrastructure/http/controllers/metrics.controller";
 import { PostgresDatabaseService } from "./infrastructure/database/pg-database";
 import { PgTransactionRunner } from "./infrastructure/database/pg-unit-of-work";
 import { CreateWalletUseCase } from "./application/use-cases/create-wallet.use-case";
@@ -12,7 +13,7 @@ import { PendingReferenceReconciler } from "./infrastructure/messaging/pending-r
 import { OutboxPublisher } from "./infrastructure/messaging/outbox-publisher";
 
 @Module({
-  controllers: [WalletsController, WageringController, HealthController],
+  controllers: [WalletsController, WageringController, HealthController, MetricsController],
   providers: [
     {
       provide: PostgresDatabaseService,
@@ -60,4 +61,3 @@ import { OutboxPublisher } from "./infrastructure/messaging/outbox-publisher";
   ],
 })
 export class AppModule {}
-

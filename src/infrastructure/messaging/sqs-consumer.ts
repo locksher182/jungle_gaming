@@ -10,10 +10,13 @@ export interface SqsMessage {
   messageId: string;
   body: string; // JSON string of ProcessWagerTransactionDto
   receiptHandle?: string;
+  messageGroupId?: string;
+  approximateReceiveCount?: number;
 }
 
 export interface SqsQueueClient {
   deleteMessage(receiptHandle: string): Promise<void>;
+  changeMessageVisibility?(receiptHandle: string, visibilityTimeoutSeconds: number): Promise<void>;
 }
 
 export class SqsConsumer {
@@ -26,7 +29,9 @@ export class SqsConsumer {
     private readonly sqsClient?: SqsQueueClient
   ) {}
 
-  public async handleMessage(message: SqsMessage): Promise<{ acknowledged: boolean; alreadyProcessed?: boolean }> {
+  public async handleMessage(
+    message: SqsMessage
+  ): Promise<{ acknowledged: boolean; alreadyProcessed?: boolean }> {
     if (this.isShuttingDown) {
       return { acknowledged: false };
     }
@@ -34,36 +39,86 @@ export class SqsConsumer {
     const payload: ProcessWagerTransactionDto = JSON.parse(message.body);
     const payloadHash = computeCanonicalPayloadHash(payload);
 
-    // 1. Transactional Inbox check & execution inside the same SQL transaction
-    const shouldAck = await this.transactionRunner.run(async (uow) => {
-      const inboxMsg = InboxMessage.receive({
-        messageId: message.messageId,
-        consumerName: this.consumerName,
-        payloadHash,
+    try {
+      // 1. Transactional Inbox check & execution inside the same SQL transaction
+      const shouldAck = await this.transactionRunner.run(async (uow) => {
+        const inboxMsg = InboxMessage.receive({
+          messageId: message.messageId,
+          consumerName: this.consumerName,
+          payloadHash,
+        });
+
+        const isNew = await uow.inbox.save(inboxMsg);
+        if (!isNew) {
+          // Already processed earlier!
+          return { alreadyProcessed: true };
+        }
+
+        // Execute exactly the same use case within this atomic SQL transaction!
+        await this.processWagerTxUseCase.execute(payload, uow);
+
+        // Mark processed in inbox
+        inboxMsg.markProcessed(new Date());
+        await uow.inbox.save(inboxMsg);
+
+        return { alreadyProcessed: false };
       });
 
-      const isNew = await uow.inbox.save(inboxMsg);
-      if (!isNew) {
-        // Already processed earlier!
-        return { alreadyProcessed: true };
+      // 2. ACK message in SQS strictly AFTER SQL commit
+      if (this.sqsClient && message.receiptHandle) {
+        await this.sqsClient.deleteMessage(message.receiptHandle);
       }
 
-      // Execute exactly the same use case within this atomic SQL transaction!
-      await this.processWagerTxUseCase.execute(payload, uow);
+      return { acknowledged: true, alreadyProcessed: shouldAck.alreadyProcessed };
+    } catch (error) {
+      // Item E: Backoff Exponencial no SQS via changeMessageVisibility
+      if (this.sqsClient?.changeMessageVisibility && message.receiptHandle) {
+        const attempt = message.approximateReceiveCount ?? 1;
+        const visibilitySeconds = Math.min(Math.pow(2, attempt) * 5, 300);
+        try {
+          await this.sqsClient.changeMessageVisibility(message.receiptHandle, visibilitySeconds);
+        } catch {
+          // Non-blocking catch for visibility update
+        }
+      }
+      throw error;
+    }
+  }
 
-      // Mark processed in inbox
-      inboxMsg.markProcessed(new Date());
-      await uow.inbox.save(inboxMsg);
-
-      return { alreadyProcessed: false };
-    });
-
-    // 2. ACK message in SQS strictly AFTER SQL commit
-    if (this.sqsClient && message.receiptHandle) {
-      await this.sqsClient.deleteMessage(message.receiptHandle);
+  // Item D: Paralelismo inteligente por MessageGroupId
+  public async handleBatch(
+    messages: SqsMessage[]
+  ): Promise<Array<{ messageId: string; acknowledged: boolean; alreadyProcessed?: boolean }>> {
+    if (this.isShuttingDown || messages.length === 0) {
+      return [];
     }
 
-    return { acknowledged: true, alreadyProcessed: shouldAck.alreadyProcessed };
+    // Agrupa mensagens por MessageGroupId (ou fallback para messageId)
+    const groups = new Map<string, SqsMessage[]>();
+    for (const msg of messages) {
+      const key = msg.messageGroupId ?? msg.messageId;
+      const list = groups.get(key) ?? [];
+      list.push(msg);
+      groups.set(key, list);
+    }
+
+    // Processa carteiras/grupos distintos em paralelo, garantindo ordem estrita dentro de cada grupo
+    const groupResults = await Promise.all(
+      Array.from(groups.values()).map(async (group) => {
+        const results: Array<{ messageId: string; acknowledged: boolean; alreadyProcessed?: boolean }> = [];
+        for (const msg of group) {
+          const res = await this.handleMessage(msg);
+          results.push({
+            messageId: msg.messageId,
+            acknowledged: res.acknowledged,
+            alreadyProcessed: res.alreadyProcessed,
+          });
+        }
+        return results;
+      })
+    );
+
+    return groupResults.flat();
   }
 
   public shutdown(): void {

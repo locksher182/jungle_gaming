@@ -20,3 +20,4 @@ Adotar o `walletId` como a unidade atômica e exclusiva de isolamento de concorr
 ## Consequências
 * **Positivas:** Prevenção absoluta de *lost updates*, escalabilidade horizontal em múltiplos nós ($\ge 3$ instâncias) e alta vazão entre carteiras diferentes.
 * **Mitigação:** Requer que as transações sejam mantidas curtas para não prender a linha da carteira por tempo prolongado.
+

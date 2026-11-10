@@ -20,3 +20,4 @@ Introduzir o estado intermediário **`PENDING_REFERENCE`** na máquina de estado
 ## Consequências
 * **Positivas:** Tolerância total a desordem em brokers distribuídos, preservação da intenção transacional e conciliação segura sem intervenção manual.
 * **Mitigação:** Exige worker de reconciliação em background para drenar mensagens pendentes.
+

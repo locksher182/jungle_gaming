@@ -18,3 +18,4 @@ Não construir subsistema de autenticação artesanal no projeto:
 ## Consequências
 * **Positivas:** 100% da capacidade de engenharia focada nas restrições financeiras e testes de concorrência que compõem a totalidade da pontuação.
 * **Mitigação:** Em deploy real de produção externa, o serviço deve operar atrás de um API Gateway ou rede privada protegida.
+

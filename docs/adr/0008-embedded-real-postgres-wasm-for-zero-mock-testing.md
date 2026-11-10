@@ -23,3 +23,4 @@ Utilizar o **PGlite (`@electric-sql/pglite`)** como motor de banco de dados nos 
 ## Consequências
 * **Positivas:** Zero mocks de banco nos testes, execução determinística e ultrarrápida no Bun, 100% de conformidade com as exigências eliminatórias do desafio.
 * **Mitigação:** Suporta simultaneamente PostgreSQL nativo via `pg` e PGlite através da interface `IDatabaseService`.
+

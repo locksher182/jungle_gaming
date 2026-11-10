@@ -19,3 +19,4 @@ Impor as regras mais críticas diretamente no DDL do PostgreSQL:
 ## Consequências
 * **Positivas:** Defesa em profundidade; mesmo que o código da aplicação falhe, o banco de dados rejeita anomalias financeiras.
 * **Mitigação:** Requer que testes de integração e migrações executem em banco relacional compatível com PostgreSQL e PL/pgSQL.
+

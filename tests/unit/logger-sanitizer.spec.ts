@@ -34,3 +34,4 @@ describe("StructuredLogger Secret Sanitization (Higiene de Contexto)", () => {
     expect(sanitized).not.toContain("super_secret_pw");
   });
 });
+

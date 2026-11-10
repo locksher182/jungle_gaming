@@ -20,3 +20,4 @@ Manter todas as classes do diretório `src/domain/` puras, sem decorators de ORM
 ## Consequências
 * **Positivas:** Domínio 100% testável em memória sem mocks, garantia de invariantes invioláveis, separação estrita de responsabilidades (Hexagonal / Clean Architecture).
 * **Mitigação:** Exige mapeamento manual ou explícito de DDL/schemas na camada de repositórios SQL.
+

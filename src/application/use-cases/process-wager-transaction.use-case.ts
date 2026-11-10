@@ -14,6 +14,8 @@ import {
 import { OutboxMessage } from "../../domain/models/outbox-message";
 import { computeCanonicalPayloadHash } from "../../domain/utils/canonical-json";
 import { DomainError } from "../../domain/errors/domain-error";
+import { retryWithJitter } from "../../domain/utils/retry";
+import { PrometheusService } from "../../infrastructure/observability/prometheus-metrics";
 import type { ITransactionRunner, IUnitOfWork } from "../ports/unit-of-work.interface";
 
 export interface ProcessWagerTransactionDto {
@@ -367,10 +369,25 @@ export class ProcessWagerTransactionUseCase {
       }
     };
 
-    if (existingUow) {
-      return await work(existingUow);
+    const result = existingUow
+      ? await work(existingUow)
+      : await retryWithJitter(() => this.transactionRunner.run(work));
+
+    try {
+      const prom = PrometheusService.getInstance();
+      prom.transactionsTotal.inc({
+        status: result.status,
+        kind: dto.kind,
+        providerId: dto.providerId,
+      });
+      if (result.isReplay) {
+        prom.idempotentReplaysTotal.inc({ providerId: dto.providerId });
+      }
+    } catch {
+      // non-blocking telemetry
     }
-    return await this.transactionRunner.run(work);
+
+    return result;
   }
 
   private async enqueueBalanceChangedEvent(
