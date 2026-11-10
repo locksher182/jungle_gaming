@@ -2,20 +2,20 @@ import { DomainError } from "../errors/domain-error";
 import { Money } from "./money";
 
 export enum WagerTransactionKind {
-  Opening  = "OPENING",
-  Bet      = "BET",
-  Win      = "WIN",
-  Loss     = "LOSS",
-  Refund   = "REFUND",
+  Opening = "OPENING",
+  Bet = "BET",
+  Win = "WIN",
+  Loss = "LOSS",
+  Refund = "REFUND",
   Rollback = "ROLLBACK",
 }
 
 export enum WagerTransactionStatus {
-  Pending          = "PENDING",
+  Pending = "PENDING",
   PendingReference = "PENDING_REFERENCE",
-  Processed        = "PROCESSED",
-  Rejected         = "REJECTED",
-  Failed           = "FAILED",
+  Processed = "PROCESSED",
+  Rejected = "REJECTED",
+  Failed = "FAILED",
 }
 
 export interface CreateWagerTransactionProps {
@@ -72,7 +72,7 @@ export class WagerTransaction {
     private _rejectionReason: string | undefined,
     private _processedAt: Date | undefined,
     public readonly createdAt: Date,
-    private _updatedAt: Date,
+    private _updatedAt: Date
   ) {}
 
   public static create(props: CreateWagerTransactionProps): WagerTransaction {
@@ -80,7 +80,10 @@ export class WagerTransaction {
       props.kind === WagerTransactionKind.Refund ||
       props.kind === WagerTransactionKind.Rollback
     ) {
-      if (!props.referenceExternalTransactionId || props.referenceExternalTransactionId.trim() === "") {
+      if (
+        !props.referenceExternalTransactionId ||
+        props.referenceExternalTransactionId.trim() === ""
+      ) {
         throw new DomainError(
           "REFUND and ROLLBACK transactions require referenceExternalTransactionId"
         );
@@ -105,7 +108,7 @@ export class WagerTransaction {
       undefined,
       undefined,
       now,
-      now,
+      now
     );
   }
 
@@ -127,7 +130,7 @@ export class WagerTransaction {
       state.rejectionReason,
       state.processedAt,
       state.createdAt,
-      state.updatedAt,
+      state.updatedAt
     );
   }
 
@@ -198,4 +201,3 @@ export class WagerTransaction {
     return this.payloadHash === hash;
   }
 }
-

@@ -9,20 +9,24 @@ Stack: Bun 1.x, TypeScript (strict), NestJS, PostgreSQL 16, AWS SQS (LocalStack)
 ## Quickstart
 
 ### Requirements
-* Bun >= 1.2
-* Docker Compose (optional for local Postgres/LocalStack)
+
+- Bun >= 1.2
+- Docker Compose (optional for local Postgres/LocalStack)
 
 ### Setup
+
 ```bash
 bun install
 ```
 
 ### Type Check
+
 ```bash
 bun run typecheck
 ```
 
 ### Tests
+
 ```bash
 bun test
 ```
@@ -39,26 +43,31 @@ To spin up PostgreSQL and LocalStack SQS:
 docker compose up -d
 ```
 
-* Postgres: `localhost:5432` (`jg_db` / `jg_user` / `jg_password`)
-* SQS: `http://localhost:4566` (FIFO queues: `wager-transactions.fifo`, `wager-transactions-dlq.fifo`)
+- Postgres: `localhost:5432` (`jg_db` / `jg_user` / `jg_password`)
+- SQS: `http://localhost:4566` (FIFO queues: `wager-transactions.fifo`, `wager-transactions-dlq.fifo`)
 
 ---
 
 ## API Endpoints
 
 ### 1. Create Wallet
+
 `POST /wallets`
+
 ```json
 {
   "playerId": "0192f28f-5dc0-7d58-bdb2-814ad6a0f4a1",
   "initialBalance": { "amount": "1000.00", "currency": "BRL" }
 }
 ```
-* Returns `201 Created`
+
+- Returns `201 Created`
 
 ### 2. Process Transaction
+
 `POST /wagering/transactions`  
 Header: `Idempotency-Key: <provider>:<tx-id>`
+
 ```json
 {
   "providerId": "provider-a",
@@ -71,24 +80,30 @@ Header: `Idempotency-Key: <provider>:<tx-id>`
   "money": { "amount": "25.00", "currency": "BRL" }
 }
 ```
-* Status codes:
-  * `200 OK`: Processed or idempotent replay.
-  * `202 Accepted`: Queued as `PENDING_REFERENCE` (out-of-order refund/rollback).
-  * `409 Conflict`: Idempotency key reused with mismatched payload.
-  * `422 Unprocessable`: Insufficient funds or invalid reference state.
+
+- Status codes:
+  - `200 OK`: Processed or idempotent replay.
+  - `202 Accepted`: Queued as `PENDING_REFERENCE` (out-of-order refund/rollback).
+  - `409 Conflict`: Idempotency key reused with mismatched payload.
+  - `422 Unprocessable`: Insufficient funds or invalid reference state.
 
 ### 3. Ledger Reconciliation
+
 `POST /wallets/:walletId/reconciliation`
-* Compares `wallets.balance` against `sum(wallet_ledger)`.
+
+- Compares `wallets.balance` against `sum(wallet_ledger)`.
 
 ### 4. Ledger Feed (Cursor Pagination)
+
 `GET /wallets/:walletId/ledger?cursor=<opaque>&limit=50`
-* Stable cursor-based pagination (no `OFFSET`).
+
+- Stable cursor-based pagination (no `OFFSET`).
 
 ### 5. Health & Telemetry
-* `GET /health/live`
-* `GET /health/ready`
-* `GET /metrics` (Prometheus format)
+
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /metrics` (Prometheus format)
 
 ---
 

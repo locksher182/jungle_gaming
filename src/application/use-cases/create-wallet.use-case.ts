@@ -1,13 +1,7 @@
 import { Money, type MoneyProps } from "../../domain/models/money";
 import { Wallet } from "../../domain/models/wallet";
-import {
-  WagerTransaction,
-  WagerTransactionKind,
-} from "../../domain/models/wager-transaction";
-import {
-  WalletLedgerEntry,
-  LedgerDirection,
-} from "../../domain/models/wallet-ledger-entry";
+import { WagerTransaction, WagerTransactionKind } from "../../domain/models/wager-transaction";
+import { WalletLedgerEntry, LedgerDirection } from "../../domain/models/wallet-ledger-entry";
 import { WalletBalanceChanged } from "../../domain/events/integration-events";
 import { OutboxMessage } from "../../domain/models/outbox-message";
 import { computeCanonicalPayloadHash } from "../../domain/utils/canonical-json";

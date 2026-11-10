@@ -1,14 +1,8 @@
+import { Controller, Post, Get, Param, Query, Body, HttpCode, HttpStatus } from "@nestjs/common";
 import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Query,
-  Body,
-  HttpCode,
-  HttpStatus,
-} from "@nestjs/common";
-import { CreateWalletUseCase, type CreateWalletDto } from "../../../application/use-cases/create-wallet.use-case";
+  CreateWalletUseCase,
+  type CreateWalletDto,
+} from "../../../application/use-cases/create-wallet.use-case";
 import { ReconcileWalletUseCase } from "../../../application/use-cases/reconcile-wallet.use-case";
 import { GetWalletLedgerUseCase } from "../../../application/use-cases/get-wallet-ledger.use-case";
 
@@ -70,4 +64,3 @@ export class WalletsController {
     };
   }
 }
-

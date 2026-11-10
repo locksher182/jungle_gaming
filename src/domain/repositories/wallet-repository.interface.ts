@@ -6,4 +6,3 @@ export interface IWalletRepository {
   save(wallet: Wallet): Promise<void>;
   findByIdForUpdate(id: string): Promise<Wallet | null>;
 }
-

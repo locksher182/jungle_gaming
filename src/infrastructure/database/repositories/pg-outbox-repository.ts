@@ -70,4 +70,3 @@ export class PgOutboxRepository implements IOutboxRepository {
     });
   }
 }
-

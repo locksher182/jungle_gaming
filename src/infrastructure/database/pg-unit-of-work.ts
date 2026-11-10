@@ -1,5 +1,8 @@
 import type { IDatabaseService, SqlExecutor } from "./database.interface";
-import type { ITransactionRunner, IUnitOfWork } from "../../application/ports/unit-of-work.interface";
+import type {
+  ITransactionRunner,
+  IUnitOfWork,
+} from "../../application/ports/unit-of-work.interface";
 import { PgWalletRepository } from "./repositories/pg-wallet-repository";
 import { PgWagerTransactionRepository } from "./repositories/pg-wager-transaction-repository";
 import { PgWalletLedgerRepository } from "./repositories/pg-wallet-ledger-repository";
@@ -32,4 +35,3 @@ export class PgTransactionRunner implements ITransactionRunner {
     });
   }
 }
-

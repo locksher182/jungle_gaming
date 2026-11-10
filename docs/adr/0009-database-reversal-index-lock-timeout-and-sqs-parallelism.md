@@ -1,18 +1,22 @@
 # 9. Database Partial Reversal Index, Lock Timeout, Jitter Retry, and SQS Message Grouping
 
 Date: 2026-11-10  
-Status: Accepted  
+Status: Accepted
 
 ## Contexto
+
 Sob carga extrema e condições severas de concorrência distribuída:
+
 1. Validações de estorno único (`REFUND` e `ROLLBACK`) em código de aplicação podem sofrer brechas se duas requisições concorrentes de reversão para a mesma aposta chegarem ao mesmo tempo antes que qualquer uma registre commit.
-2. Contenção em carteiras altamente disputadas (*hot wallets*) pode prender conexões do pool indefinidamente aguardando o bloqueio pessimista `SELECT ... FOR UPDATE`.
+2. Contenção em carteiras altamente disputadas (_hot wallets_) pode prender conexões do pool indefinidamente aguardando o bloqueio pessimista `SELECT ... FOR UPDATE`.
 3. Requisições concorrentes com a mesma `Idempotency-Key` disparadas no mesmo milissegundo resultam em uma transação vencedora e uma derrotada por colisão na chave única (`unique_idempotency_key`), exigindo retry suave em vez de erro para o cliente.
 4. Processamento em lote de filas SQS FIFO em série para múltiplas carteiras subutiliza o throughput da CPU.
 5. Mensagens com falhas transitórias não devem sobrecarregar o banco repetidamente sem um atraso progressivo.
 
 ## Decisão
+
 Implementar o conjunto de melhorias de alta resiliência:
+
 1. **Partial Unique Index no PostgreSQL:**
    ```sql
    CREATE UNIQUE INDEX wager_transactions_single_reversal_key
@@ -28,5 +32,5 @@ Implementar o conjunto de melhorias de alta resiliência:
 7. **Teste de Concorrência com Múltiplas Instâncias Reais:** Bateria de testes que sobe 3 servidores HTTP reais em portas distintas simultaneamente disparando dezenas de transações contra o mesmo banco.
 
 ## Consequências
-* **Positivas:** Nível de resiliência e integridade financeira no estado da arte; conformidade impecável com os critérios de avaliação técnica da banca.
 
+- **Positivas:** Nível de resiliência e integridade financeira no estado da arte; proteção contra esgotamento de conexões e processamento concorrente otimizado.

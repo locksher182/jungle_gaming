@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { createTestContext, type TestContext } from "../test-helper";
-import { WagerTransactionKind, WagerTransactionStatus } from "../../src/domain/models/wager-transaction";
+import {
+  WagerTransactionKind,
+  WagerTransactionStatus,
+} from "../../src/domain/models/wager-transaction";
 import { DomainError } from "../../src/domain/errors/domain-error";
 
-describe("Testes de Integração e Garantias de Banco (Seção 13)", () => {
+describe("Testes de Integração e Garantias de Banco", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
@@ -52,9 +55,10 @@ describe("Testes de Integração e Garantias de Banco (Seção 13)", () => {
       initialBalance: { amount: "100.00", currency: "BRL" },
     });
 
-    const entries = await ctx.pglite.query<{ id: string }>("SELECT id FROM wallet_ledger WHERE wallet_id = $1", [
-      wallet.id,
-    ]);
+    const entries = await ctx.pglite.query<{ id: string }>(
+      "SELECT id FROM wallet_ledger WHERE wallet_id = $1",
+      [wallet.id]
+    );
     expect(entries.rows.length).toBeGreaterThan(0);
     const ledgerId = entries.rows[0]!.id;
 

@@ -1,26 +1,27 @@
 # 8. Embedded Real PostgreSQL (PGlite WASM) for Zero-Mock Testing
 
 Date: 2026-11-10  
-Status: Accepted  
+Status: Accepted
 
-## Contexto
-O edital e as regras do projeto estabelecem como **falha eliminatória direta**:
-> *"Testes que substituem completamente PostgreSQL e SQS por mocks."*
+## Context
 
-Ao mesmo tempo, rodar suites de teste de concorrência e integração dependendo exclusivamente de containers Docker externos cria atrito severo em pipelines de CI locais, além de lentidão na inicialização e risco de quebra de testes se o daemon do Docker não estiver disponível no host.
+High-integrity financial systems rely heavily on database constraints: `CHECK` constraints (e.g. non-negative balance), unique indexes, foreign keys, triggers (preventing ledger mutations), and transaction isolation semantics. Testing against in-memory mocks (e.g., in-memory JavaScript maps or arrays) fails to validate real SQL behavior and can hide concurrency bugs, transaction leaks, or invalid constraints. Relying exclusively on external Docker daemons introduces fragility in CI environments and developer workstations where Docker may not be running.
 
-## Decisão
-Utilizar o **PGlite (`@electric-sql/pglite`)** como motor de banco de dados nos testes de integração e concorrência:
-1. PGlite é o motor oficial C do PostgreSQL compilado diretamente para WebAssembly (WASM).
-2. Ele executa código real do PostgreSQL: executa exatamente a mesma migration DDL (`001_initial_schema.sql`), triggers PL/pgSQL reais, `CHECK` constraints, `UNIQUE` constraints e suporte a transações ACID (`BEGIN`, `COMMIT`, `ROLLBACK`).
-3. Não há mocks do banco de dados: as consultas SQL, inserções, bloqueios pessimistas e triggers são executados pelo próprio motor PostgreSQL.
-4. Para ambientes de staging e produção com Docker Compose, o driver `pg` padrão conecta nativamente ao PostgreSQL em container ou AWS RDS através de `DATABASE_URL`.
+## Decision
 
-## Alternativas Descartadas
-* **Mocks de repositório (ex.: arrays em memória sem banco relacional):** Rejeitado categoricamente pelo edital como falha eliminatória.
-* **SQLite em modo de compatibilidade:** Rejeitado porque o SQLite não suporta triggers com `LANGUAGE plpgsql`, tem sintaxe DDL diferente e não valida o comportamento real do PostgreSQL.
+Utilize **PGlite (`@electric-sql/pglite`)** as the database engine for integration and concurrency tests:
 
-## Consequências
-* **Positivas:** Zero mocks de banco nos testes, execução determinística e ultrarrápida no Bun, 100% de conformidade com as exigências eliminatórias do desafio.
-* **Mitigação:** Suporta simultaneamente PostgreSQL nativo via `pg` e PGlite através da interface `IDatabaseService`.
+1. PGlite is the official C codebase of PostgreSQL compiled directly to WebAssembly (WASM).
+2. It executes real PostgreSQL engine logic: the exact same migration DDL (`001_initial_schema.sql`), PL/pgSQL triggers, `CHECK` constraints, partial unique indexes, and ACID transactions (`BEGIN`, `COMMIT`, `ROLLBACK`).
+3. Zero database mocking: queries, locks, triggers, and rollback behaviors run against an actual relational engine.
+4. For production and staging environments, native `pg.Pool` connects to external PostgreSQL instances via `DATABASE_URL`.
 
+## Alternatives Considered
+
+- **In-memory Repository Mocks:** Rejected. Mocks do not enforce SQL constraints, transactions, or lock semantics.
+- **SQLite in Compatibility Mode:** Rejected. SQLite lacks PL/pgSQL trigger syntax, differs in constraint handling, and does not replicate PostgreSQL locking behavior.
+
+## Consequences
+
+- **Positive:** High-speed, deterministic test execution with complete fidelity to PostgreSQL 16 semantics.
+- **Architecture:** Abstracted behind `IDatabaseService`, allowing seamless switching between native `pg.Pool` and embedded PGlite.

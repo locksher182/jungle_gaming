@@ -26,4 +26,3 @@ bootstrap().catch((err) => {
   StructuredLogger.error("Failed to bootstrap application", err);
   process.exit(1);
 });
-

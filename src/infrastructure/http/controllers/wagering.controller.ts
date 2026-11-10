@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Headers,
-  Body,
-  Res,
-  HttpStatus,
-} from "@nestjs/common";
+import { Controller, Post, Headers, Body, Res, HttpStatus } from "@nestjs/common";
 import type { Response } from "express";
 import {
   ProcessWagerTransactionUseCase,
@@ -15,9 +8,7 @@ import { WagerTransactionStatus } from "../../../domain/models/wager-transaction
 
 @Controller("wagering")
 export class WageringController {
-  constructor(
-    private readonly processWagerTxUseCase: ProcessWagerTransactionUseCase
-  ) {}
+  constructor(private readonly processWagerTxUseCase: ProcessWagerTransactionUseCase) {}
 
   @Post("transactions")
   public async handleTransaction(
@@ -48,4 +39,3 @@ export class WageringController {
     });
   }
 }
-

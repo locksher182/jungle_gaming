@@ -7,7 +7,8 @@ export interface StructuredLogContext {
   [key: string]: unknown;
 }
 
-const SENSITIVE_KEY_REGEX = /(pass(word)?|secret|token|auth(orization)?|cred(ential)?|key|api_?key|pin|cvv|cpf|ssn|card)/i;
+const SENSITIVE_KEY_REGEX =
+  /(pass(word)?|secret|token|auth(orization)?|cred(ential)?|key|api_?key|pin|cvv|cpf|ssn|card)/i;
 const CONNECTION_STRING_PASSWORD_REGEX = /(:\/\/[^:]+:)([^@]+)(@)/g;
 
 export class StructuredLogger {
@@ -45,7 +46,10 @@ export class StructuredLogger {
       JSON.stringify({
         level: "INFO",
         timestamp: new Date().toISOString(),
-        message: typeof message === "string" ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3") : message,
+        message:
+          typeof message === "string"
+            ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3")
+            : message,
         ...(this.sanitize(context) as Record<string, unknown>),
       })
     );
@@ -56,7 +60,10 @@ export class StructuredLogger {
       JSON.stringify({
         level: "WARN",
         timestamp: new Date().toISOString(),
-        message: typeof message === "string" ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3") : message,
+        message:
+          typeof message === "string"
+            ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3")
+            : message,
         ...(this.sanitize(context) as Record<string, unknown>),
       })
     );
@@ -67,8 +74,14 @@ export class StructuredLogger {
       JSON.stringify({
         level: "ERROR",
         timestamp: new Date().toISOString(),
-        message: typeof message === "string" ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3") : message,
-        error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : this.sanitize(error),
+        message:
+          typeof message === "string"
+            ? message.replace(CONNECTION_STRING_PASSWORD_REGEX, "$1***$3")
+            : message,
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : this.sanitize(error),
         ...(this.sanitize(context) as Record<string, unknown>),
       })
     );

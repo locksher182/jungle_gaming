@@ -13,6 +13,8 @@ export interface PaginatedLedgerResult {
 export interface IWalletLedgerRepository {
   save(entry: WalletLedgerEntry): Promise<void>;
   findByWalletId(walletId: string): Promise<WalletLedgerEntry[]>;
-  findByWalletIdPaginated(walletId: string, options: LedgerCursorPagination): Promise<PaginatedLedgerResult>;
+  findByWalletIdPaginated(
+    walletId: string,
+    options: LedgerCursorPagination
+  ): Promise<PaginatedLedgerResult>;
 }
-

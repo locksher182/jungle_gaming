@@ -18,10 +18,9 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
   }
 
   public async findByIdempotencyKey(key: string): Promise<WagerTransaction | null> {
-    const res = await this.db.query(
-      "SELECT * FROM wager_transactions WHERE idempotency_key = $1",
-      [key]
-    );
+    const res = await this.db.query("SELECT * FROM wager_transactions WHERE idempotency_key = $1", [
+      key,
+    ]);
     if (res.rows.length === 0) return null;
     return this.mapToDomain(res.rows[0]);
   }
@@ -117,4 +116,3 @@ export class PgWagerTransactionRepository implements IWagerTransactionRepository
     });
   }
 }
-

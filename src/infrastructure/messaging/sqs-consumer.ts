@@ -27,7 +27,7 @@ export class SqsConsumer {
     private readonly transactionRunner: ITransactionRunner,
     private readonly processWagerTxUseCase: ProcessWagerTransactionUseCase,
     private readonly sqsClient?: SqsQueueClient
-  ) { }
+  ) {}
 
   public async handleMessage(
     message: SqsMessage
@@ -105,7 +105,11 @@ export class SqsConsumer {
     // Process different groups concurrently, preserve sequence within each group
     const groupResults = await Promise.all(
       Array.from(groups.values()).map(async (group) => {
-        const results: Array<{ messageId: string; acknowledged: boolean; alreadyProcessed?: boolean }> = [];
+        const results: Array<{
+          messageId: string;
+          acknowledged: boolean;
+          alreadyProcessed?: boolean;
+        }> = [];
         for (const msg of group) {
           const res = await this.handleMessage(msg);
           results.push({

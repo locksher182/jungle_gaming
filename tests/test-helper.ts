@@ -36,7 +36,11 @@ export async function createTestContext(): Promise<TestContext> {
   const processWagerTxUseCase = new ProcessWagerTransactionUseCase(transactionRunner);
   const reconcileWalletUseCase = new ReconcileWalletUseCase(transactionRunner);
   const getWalletLedgerUseCase = new GetWalletLedgerUseCase(transactionRunner);
-  const sqsConsumer = new SqsConsumer("test-wager-consumer", transactionRunner, processWagerTxUseCase);
+  const sqsConsumer = new SqsConsumer(
+    "test-wager-consumer",
+    transactionRunner,
+    processWagerTxUseCase
+  );
   const outboxPublisher = new OutboxPublisher(transactionRunner);
   const pendingReferenceReconciler = new PendingReferenceReconciler(transactionRunner);
 
@@ -53,4 +57,3 @@ export async function createTestContext(): Promise<TestContext> {
     pendingReferenceReconciler,
   };
 }
-

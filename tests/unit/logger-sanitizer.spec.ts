@@ -27,11 +27,11 @@ describe("StructuredLogger Secret Sanitization (Higiene de Contexto)", () => {
   });
 
   it("deve mascarar credenciais embutidas em connection strings", () => {
-    const connectionUrl = "postgres://admin_user:super_secret_pw@db.production.internal:5432/finance_db";
+    const connectionUrl =
+      "postgres://admin_user:super_secret_pw@db.production.internal:5432/finance_db";
     const sanitized = StructuredLogger.sanitize(connectionUrl);
 
     expect(sanitized).toBe("postgres://admin_user:***@db.production.internal:5432/finance_db");
     expect(sanitized).not.toContain("super_secret_pw");
   });
 });
-

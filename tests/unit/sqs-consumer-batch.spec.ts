@@ -70,7 +70,7 @@ describe("SqsConsumer - Paralelismo por MessageGroupId e Backoff de Visibilidade
     const reconB = await ctx.reconcileWalletUseCase.execute(walletB.id);
 
     expect(reconA.storedBalance.amount).toBe("105.00"); // 100 - 10 + 15
-    expect(reconB.storedBalance.amount).toBe("80.00");  // 100 - 20
+    expect(reconB.storedBalance.amount).toBe("80.00"); // 100 - 20
   });
 
   it("deve ajustar a visibilidade no SQS com backoff exponencial em falha transitória", async () => {
@@ -119,4 +119,3 @@ describe("SqsConsumer - Paralelismo por MessageGroupId e Backoff de Visibilidade
     expect(visibilityAdjusted!.seconds).toBe(40);
   });
 });
-

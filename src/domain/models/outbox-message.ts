@@ -26,7 +26,7 @@ export class OutboxMessage {
     private _attempts: number,
     public readonly occurredAt: Date,
     private _nextAttemptAt: Date | undefined,
-    private _publishedAt: Date | undefined,
+    private _publishedAt: Date | undefined
   ) {}
 
   public static enqueue(props: EnqueueOutboxProps): OutboxMessage {
@@ -39,7 +39,7 @@ export class OutboxMessage {
       0,
       now,
       undefined,
-      undefined,
+      undefined
     );
   }
 
@@ -52,7 +52,7 @@ export class OutboxMessage {
       state.attempts,
       state.occurredAt,
       state.nextAttemptAt,
-      state.publishedAt,
+      state.publishedAt
     );
   }
 
@@ -89,4 +89,3 @@ export class OutboxMessage {
     return this._publishedAt;
   }
 }
-

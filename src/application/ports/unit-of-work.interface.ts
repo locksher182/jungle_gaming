@@ -15,4 +15,3 @@ export interface IUnitOfWork {
 export interface ITransactionRunner {
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }
-

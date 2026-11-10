@@ -6,7 +6,7 @@ import {
 } from "../../src/domain/models/wager-transaction";
 import { OutboxMessage } from "../../src/domain/models/outbox-message";
 
-describe("Testes Obrigatórios de Concorrência e Resiliência (Seção 13)", () => {
+describe("Testes de Concorrência e Resiliência", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {

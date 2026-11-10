@@ -26,7 +26,7 @@ export class Wallet {
     private _balance: Money,
     private _version: number,
     public readonly createdAt: Date,
-    private _updatedAt: Date,
+    private _updatedAt: Date
   ) {}
 
   public static open(props: OpenWalletProps): Wallet {
@@ -42,7 +42,7 @@ export class Wallet {
       props.initialBalance,
       1,
       now,
-      now,
+      now
     );
   }
 
@@ -54,7 +54,7 @@ export class Wallet {
       state.balance,
       state.version,
       state.createdAt,
-      state.updatedAt,
+      state.updatedAt
     );
   }
 
@@ -126,4 +126,3 @@ export class Wallet {
     }
   }
 }
-

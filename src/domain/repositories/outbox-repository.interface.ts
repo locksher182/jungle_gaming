@@ -5,4 +5,3 @@ export interface IOutboxRepository {
   fetchDueMessages(limit: number): Promise<OutboxMessage[]>;
   update(message: OutboxMessage): Promise<void>;
 }
-

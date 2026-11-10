@@ -17,7 +17,10 @@ export class PostgresDatabaseService implements IDatabaseService {
     }
   }
 
-  public async query<T extends QueryResultRow = any>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
+  public async query<T extends QueryResultRow = any>(
+    sql: string,
+    params?: unknown[]
+  ): Promise<QueryResult<T>> {
     if (this.pglite) {
       const res = await this.pglite.query<T>(sql, params as any[]);
       return { rows: res.rows, rowCount: res.rows.length };

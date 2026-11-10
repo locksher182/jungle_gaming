@@ -1,6 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import { createTestContext } from "../test-helper";
-import { WagerTransactionKind, WagerTransactionStatus } from "../../src/domain/models/wager-transaction";
+import {
+  WagerTransactionKind,
+  WagerTransactionStatus,
+} from "../../src/domain/models/wager-transaction";
 
 describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () => {
   it("deve executar 3 instâncias HTTP reais em portas distintas simultaneamente sem corrupção contábil", async () => {
@@ -28,7 +31,10 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
             } as any);
             return Response.json(res);
           }
-          if (url.pathname === `/wallets/${initialWallet.id}/reconciliation` && req.method === "POST") {
+          if (
+            url.pathname === `/wallets/${initialWallet.id}/reconciliation` &&
+            req.method === "POST"
+          ) {
             const recon = await ctx.reconcileWalletUseCase.execute(initialWallet.id);
             return Response.json(recon);
           }
@@ -87,5 +93,5 @@ describe("Teste de Concorrência com Múltiplas Instâncias Reais (>= 3)", () =>
         s.stop(true);
       }
     }
-  });
+  }, 30000);
 });

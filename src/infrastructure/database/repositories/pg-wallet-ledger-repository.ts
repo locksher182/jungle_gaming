@@ -88,7 +88,9 @@ export class PgWalletLedgerRepository implements IWalletLedgerRepository {
     let nextCursor: string | undefined;
     if (items.length === limit) {
       const lastItem = items[items.length - 1]!;
-      nextCursor = Buffer.from(`${lastItem.createdAt.toISOString()}|${lastItem.id}`).toString("base64");
+      nextCursor = Buffer.from(`${lastItem.createdAt.toISOString()}|${lastItem.id}`).toString(
+        "base64"
+      );
     }
 
     return {
@@ -114,4 +116,3 @@ export class PgWalletLedgerRepository implements IWalletLedgerRepository {
     });
   }
 }
-

@@ -25,4 +25,3 @@ export function computeCanonicalPayloadHash(payload: unknown): string {
   const jsonString = JSON.stringify(canonicalObj);
   return createHash("sha256").update(jsonString).digest("hex");
 }
-

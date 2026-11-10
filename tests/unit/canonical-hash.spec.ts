@@ -34,8 +34,6 @@ describe("Canonical JSON Hash for Idempotency (Unit Tests)", () => {
       money: { amount: "50.01", currency: "BRL" },
     };
 
-    expect(computeCanonicalPayloadHash(payloadA)).not.toBe(
-      computeCanonicalPayloadHash(payloadB)
-    );
+    expect(computeCanonicalPayloadHash(payloadA)).not.toBe(computeCanonicalPayloadHash(payloadB));
   });
 });

@@ -38,4 +38,3 @@ export class MetricsCollector {
     return sortedTags ? `${metric}{${sortedTags}}` : metric;
   }
 }
-

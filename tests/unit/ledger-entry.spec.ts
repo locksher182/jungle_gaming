@@ -1,8 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import {
-  WalletLedgerEntry,
-  LedgerDirection,
-} from "../../src/domain/models/wallet-ledger-entry";
+import { WalletLedgerEntry, LedgerDirection } from "../../src/domain/models/wallet-ledger-entry";
 import { Money } from "../../src/domain/models/money";
 import { DomainError } from "../../src/domain/errors/domain-error";
 
